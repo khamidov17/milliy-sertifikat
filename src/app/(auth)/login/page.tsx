@@ -62,7 +62,7 @@ export default function LoginPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="parol">Parol</Label>
-            <Link href="#" className="text-xs font-medium text-primary hover:text-primary-hover">Parolni unutdingizmi?</Link>
+            <Link href="/forgot-password" className="text-xs font-medium text-primary hover:text-primary-hover">Parolni unutdingizmi?</Link>
           </div>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -72,12 +72,6 @@ export default function LoginPage() {
 
         <Yuborish />
       </form>
-
-      <div className="rounded-xl border border-border bg-[#FBF6EC] px-4 py-3 text-xs text-muted">
-        <p className="mb-1 font-semibold text-foreground">Demo hisoblar</p>
-        <p>O'quvchi: <span className="font-medium text-foreground">dilnoza / parol123</span></p>
-        <p>Admin: <span className="font-medium text-foreground">admin / parol123</span></p>
-      </div>
 
       <p className="text-center text-sm text-muted">
         Hisobingiz yo'qmi?{" "}

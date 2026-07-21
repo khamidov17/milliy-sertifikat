@@ -1,12 +1,23 @@
 import katex from "katex";
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 // Matn ichidagi $...$ (inline) va $$...$$ (blok) LaTeX qismlarini KaTeX bilan
 // render qiladi, qolgan qismini oddiy matn sifatida ko'rsatadi.
+// XSS: xatolik yuz bersa, xom LaTeX ni ESCAPE qilib qaytaramiz (inject emas).
 function render(tex: string, display: boolean): string {
   try {
-    return katex.renderToString(tex, { displayMode: display, throwOnError: false, output: "html" });
+    return katex.renderToString(tex, {
+      displayMode: display,
+      throwOnError: false,
+      trust: false,
+      strict: "ignore",
+      output: "html",
+    });
   } catch {
-    return tex;
+    return escapeHtml(tex);
   }
 }
 

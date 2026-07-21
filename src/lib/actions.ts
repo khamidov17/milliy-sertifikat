@@ -3,12 +3,13 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "./supabase/server";
 import { supabaseAdmin } from "./supabase/admin";
+import { mijozKaliti, tekshirLimit } from "./ratelimit";
 
 export interface AuthHolat {
   xato?: string;
   xabar?: string;
   ok?: boolean;
-  next?: string; // muvaffaqiyatda klient shu manzilga o'tadi (cookie timing uchun)
+  next?: string;
 }
 
 function aralashtir<T>(a: T[]): T[] {
@@ -23,6 +24,9 @@ function aralashtir<T>(a: T[]): T[] {
 // ═══════════════ AUTH (Supabase Auth) ═══════════════
 
 export async function royxatdanOtish(_prev: AuthHolat, form: FormData): Promise<AuthHolat> {
+  if (!tekshirLimit("signup:" + (await mijozKaliti()), 5, 60_000))
+    return { xato: "Juda ko'p urinish. Bir oz kuting." };
+
   const ism = String(form.get("ism") ?? "").trim();
   const familiya = String(form.get("familiya") ?? "").trim();
   const username = String(form.get("username") ?? "").trim().toLowerCase();
@@ -30,7 +34,8 @@ export async function royxatdanOtish(_prev: AuthHolat, form: FormData): Promise<
   const parol = String(form.get("parol") ?? "");
 
   if (!ism || !username || !email || !parol) return { xato: "Barcha majburiy maydonlarni to'ldiring." };
-  if (username.length < 3) return { xato: "Foydalanuvchi nomi kamida 3 ta belgi bo'lsin." };
+  if (username.length < 3 || username.length > 30 || !/^[a-z0-9_]+$/.test(username))
+    return { xato: "Foydalanuvchi nomi 3-30 ta harf/raqam/_ bo'lsin." };
   if (parol.length < 6) return { xato: "Parol kamida 6 ta belgi bo'lsin." };
 
   const admin = supabaseAdmin();
@@ -44,21 +49,23 @@ export async function royxatdanOtish(_prev: AuthHolat, form: FormData): Promise<
     options: { data: { ism, familiya, username } },
   });
   if (error) {
-    if (error.message.toLowerCase().includes("already")) return { xato: "Bu email allaqachon ro'yxatdan o'tgan." };
-    return { xato: error.message };
+    // Email enumeratsiyasini oldini olish uchun umumiy xabar
+    return { xabar: "Ro'yxatdan o'tish so'rovi qabul qilindi. Emailingizni tekshiring." };
   }
   if (data.session) return { ok: true, next: "/dashboard" };
   return { xabar: "Ro'yxatdan o'tdingiz. Emailingizni tasdiqlang, so'ng tizimga kiring." };
 }
 
 export async function kirish(_prev: AuthHolat, form: FormData): Promise<AuthHolat> {
+  if (!tekshirLimit("login:" + (await mijozKaliti()), 10, 60_000))
+    return { xato: "Juda ko'p urinish. Bir oz kuting." };
+
   const idf = String(form.get("idf") ?? "").trim().toLowerCase();
   const parol = String(form.get("parol") ?? "");
   if (!idf || !parol) return { xato: "Ma'lumotlarni kiriting." };
 
   let email = idf;
   if (!idf.includes("@")) {
-    // username → email (admin orqali, chunki hali kirmagan)
     const admin = supabaseAdmin();
     const { data: p } = await admin.from("profiles").select("id").eq("username", idf).maybeSingle();
     if (!p) return { xato: "Login yoki parol noto'g'ri." };
@@ -83,55 +90,116 @@ export async function chiqish() {
   redirect("/login");
 }
 
-// ═══════════════ MASHQ (practice) ═══════════════
+// Parolni tiklash — email yuborish
+export async function parolTiklashSorov(_prev: AuthHolat, form: FormData): Promise<AuthHolat> {
+  if (!tekshirLimit("reset:" + (await mijozKaliti()), 5, 60_000))
+    return { xato: "Juda ko'p urinish. Bir oz kuting." };
+  const email = String(form.get("email") ?? "").trim().toLowerCase();
+  if (!email) return { xato: "Email kiriting." };
+  const sb = await supabaseServer();
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/callback?next=/reset-password` });
+  // Enumeratsiyani oldini olish uchun har doim bir xil javob
+  return { xabar: "Agar bu email ro'yxatda bo'lsa, tiklash havolasi yuborildi." };
+}
 
+// Yangi parol o'rnatish (reset havolasidan keyin)
+export async function parolYangilash(_prev: AuthHolat, form: FormData): Promise<AuthHolat> {
+  const parol = String(form.get("parol") ?? "");
+  if (parol.length < 6) return { xato: "Parol kamida 6 ta belgi bo'lsin." };
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return { xato: "Havola yaroqsiz yoki muddati tugagan." };
+  const { error } = await sb.auth.updateUser({ password: parol });
+  if (error) return { xato: "Parolni yangilab bo'lmadi." };
+  return { ok: true, next: "/dashboard" };
+}
+
+// ═══════════════ MASHQ (practice — SERVERDA baholanadi) ═══════════════
+
+// togri/izoh MIJOZGA YUBORILMAYDI.
 export interface KlientSavol {
   id: number; bob: string | null; mavzu: string; manba_kod: string | null;
-  qiyinchilik: string; matn: string; variantlar: string[]; togri: string; izoh: string;
+  qiyinchilik: string; matn: string; variantlar: string[];
 }
+
+const SEL_XAVFSIZ = "id,bob,mavzu,manba_kod,qiyinchilik,matn,variantlar";
 
 export async function savollarOl(params: {
   rejim: "mavzu" | "kurs"; mavzu?: string; qiyinchilik?: string; soni: number;
 }): Promise<KlientSavol[]> {
-  const admin = supabaseAdmin();
-  const sel = "id,bob,mavzu,manba_kod,qiyinchilik,matn,variantlar,togri,izoh";
-  let rows: KlientSavol[] = [];
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return [];
+  const soni = Math.min(Math.max(1, Number(params.soni) || 10), 50); // cheklov
 
+  const admin = supabaseAdmin();
+  let rows: KlientSavol[] = [];
   if (params.rejim === "kurs") {
-    const { data } = await admin.from("questions").select(sel).limit(500);
-    rows = aralashtir((data ?? []) as KlientSavol[]).slice(0, params.soni);
+    const { data } = await admin.from("questions").select(SEL_XAVFSIZ).limit(500);
+    rows = aralashtir((data ?? []) as KlientSavol[]).slice(0, soni);
   } else {
-    let q = admin.from("questions").select(sel).eq("mavzu", params.mavzu ?? "");
+    let q = admin.from("questions").select(SEL_XAVFSIZ).eq("mavzu", params.mavzu ?? "");
     if (params.qiyinchilik && params.qiyinchilik !== "aralash") q = q.eq("qiyinchilik", params.qiyinchilik);
     let { data } = await q.limit(500);
     if ((!data || data.length === 0) && params.qiyinchilik && params.qiyinchilik !== "aralash") {
-      data = (await admin.from("questions").select(sel).eq("mavzu", params.mavzu ?? "").limit(500)).data;
+      data = (await admin.from("questions").select(SEL_XAVFSIZ).eq("mavzu", params.mavzu ?? "").limit(500)).data;
     }
-    rows = aralashtir((data ?? []) as KlientSavol[]).slice(0, params.soni);
+    rows = aralashtir((data ?? []) as KlientSavol[]).slice(0, soni);
   }
-  return rows.map((r) => ({ ...r, qiyinchilik: r.qiyinchilik ?? "orta", izoh: r.izoh ?? "" }));
+  return rows.map((r) => ({ ...r, qiyinchilik: r.qiyinchilik ?? "orta" }));
 }
 
-export interface JavobYozuv { question_id: number; tanlangan: string | null; togri: boolean; sekund: number; }
+// Bitta savol javobini serverda tekshiradi (javob faqat shu savol uchun ochiladi).
+export interface JavobNatija { togri: boolean; togriJavob: string; izoh: string; }
+export async function javobTekshir(questionId: number, tanlangan: string): Promise<JavobNatija | null> {
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return null;
+  const admin = supabaseAdmin();
+  const { data: q } = await admin.from("questions").select("togri,izoh").eq("id", questionId).single();
+  if (!q) return null;
+  return { togri: tanlangan === q.togri, togriJavob: q.togri, izoh: q.izoh ?? "" };
+}
 
+// Urinishni SERVERDA baholab saqlaydi (klient balli/togri ishonchsiz).
 export async function urinishSaqlash(data: {
-  turi: string; mock_id?: number | null; nomi?: string;
-  jami: number; togri: number; davomiylik: number; javoblar: JavobYozuv[];
+  turi: string; mock_id?: number | null;
+  davomiylik: number; javoblar: { question_id: number; tanlangan: string | null; sekund: number }[];
 }) {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
+  if (!tekshirLimit("save:" + user.id, 40, 60_000)) return;
+
+  const turi = data.turi === "kurs" ? "kurs" : "mavzu"; // whitelist
+  const javoblar = (Array.isArray(data.javoblar) ? data.javoblar : []).slice(0, 200);
+  const qids = javoblar.map((j) => j.question_id);
+  if (!qids.length) return;
+
   const admin = supabaseAdmin();
-  const ball = Math.round((data.togri / Math.max(1, data.jami)) * 100);
-  const { data: att, error } = await admin.from("attempts").insert({
-    user_id: user.id, turi: data.turi, mock_id: data.mock_id ?? null, nomi: data.nomi ?? null,
-    jami: data.jami, togri: data.togri, ball, davomiylik: data.davomiylik,
+  const { data: qs } = await admin.from("questions").select("id,togri,mavzu").in("id", qids);
+  const map = new Map((qs ?? []).map((q) => [q.id, { togri: q.togri, mavzu: q.mavzu }]));
+
+  let togri = 0;
+  const rows = javoblar.map((j) => {
+    const q = map.get(j.question_id);
+    const ok = !!q && q.togri === j.tanlangan;
+    if (ok) togri++;
+    return { question_id: j.question_id, tanlangan: j.tanlangan, togri: ok, sekund: Math.max(0, Math.min(36000, Number(j.sekund) || 0)) };
+  });
+  const jami = javoblar.length;
+  const ball = Math.round((togri / Math.max(1, jami)) * 100);
+  const nomi = turi === "kurs" ? "Kurs sinovi" : (map.get(qids[0])?.mavzu ?? "Mashq"); // serverdan
+
+  const { data: att } = await admin.from("attempts").insert({
+    user_id: user.id, turi, mock_id: data.mock_id ?? null, nomi,
+    jami, togri, ball, davomiylik: Math.max(0, Math.min(86400, Number(data.davomiylik) || 0)),
   }).select("id").single();
-  if (error || !att) return;
-  const rows = data.javoblar.map((j) => ({
-    attempt_id: att.id, question_id: j.question_id, tanlangan: j.tanlangan, togri: j.togri, sekund: j.sekund,
-  }));
-  if (rows.length) await admin.from("attempt_answers").insert(rows);
+  if (att) {
+    const ins = rows.map((r) => ({ attempt_id: att.id, ...r }));
+    if (ins.length) await admin.from("attempt_answers").insert(ins);
+  }
 }
 
 // ═══════════════ SINOV IMTIHONLARI (mock — SERVERDA baholanadi) ═══════════════
@@ -149,6 +217,9 @@ export interface NatijaSavol {
 export interface MockNatija { attemptId: number; ball: number; togri: number; jami: number; davomiylik: number; natijalar: NatijaSavol[]; }
 
 export async function mockRoyxat(): Promise<MockRoyxatItem[]> {
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return [];
   const admin = supabaseAdmin();
   const now = Date.now();
   const { data } = await admin
@@ -198,31 +269,44 @@ export async function mockYuborish(data: {
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return { xato: "Avval tizimga kiring." };
-  const admin = supabaseAdmin();
-  const { data: m } = await admin.from("mock_exams").select("nomi").eq("id", data.mockId).single();
+  if (!tekshirLimit("mock:" + user.id, 20, 60_000)) return { xato: "Juda ko'p urinish. Bir oz kuting." };
 
-  const qids = data.javoblar.map((j) => j.question_id);
-  const { data: qs } = await admin.from("questions").select("id,matn,variantlar,togri,izoh,mavzu,manba_kod").in("id", qids);
+  const admin = supabaseAdmin();
+  const { data: m } = await admin.from("mock_exams").select("nomi,boshlanish_at,tugash_at").eq("id", data.mockId).single();
+  if (!m) return { xato: "Imtihon topilmadi." };
+  const now = Date.now();
+  if (m.boshlanish_at && now < new Date(m.boshlanish_at).getTime()) return { xato: "Imtihon hali boshlanmagan." };
+  if (m.tugash_at && now > new Date(m.tugash_at).getTime()) return { xato: "Imtihon muddati tugagan." };
+
+  // FAQAT shu imtihonga tegishli savollar (IDOR / answer-oracle himoyasi)
+  const { data: mq } = await admin.from("mock_questions").select("question_id").eq("mock_id", data.mockId);
+  const ruxsat = new Set((mq ?? []).map((r) => r.question_id));
+  const javoblar = (Array.isArray(data.javoblar) ? data.javoblar : []).filter((j) => ruxsat.has(j.question_id));
+  const qids = javoblar.map((j) => j.question_id);
+
+  const { data: qs } = qids.length
+    ? await admin.from("questions").select("id,matn,variantlar,togri,izoh,mavzu,manba_kod").in("id", qids)
+    : { data: [] };
   const qmap = new Map<number, { matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null }>();
-  for (const q of qs ?? []) qmap.set(q.id, q as { id: number } & { matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null });
+  for (const q of qs ?? []) qmap.set((q as { id: number }).id, q as { id: number } & { matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null });
 
   let togri = 0;
-  const natijalar: NatijaSavol[] = data.javoblar.map((j) => {
+  const natijalar: NatijaSavol[] = javoblar.map((j) => {
     const q = qmap.get(j.question_id);
     const ok = !!q && j.tanlangan === q.togri;
     if (ok) togri++;
     return {
       question_id: j.question_id, matn: q?.matn ?? "", variantlar: q?.variantlar ?? [],
       mavzu: q?.mavzu ?? "", manba_kod: q?.manba_kod ?? null, tanlangan: j.tanlangan,
-      togriJavob: q?.togri ?? "", togri: ok, izoh: q?.izoh ?? "", sekund: j.sekund,
+      togriJavob: q?.togri ?? "", togri: ok, izoh: q?.izoh ?? "", sekund: Math.max(0, Math.min(36000, Number(j.sekund) || 0)),
     };
   });
 
-  const jami = data.javoblar.length;
+  const jami = natijalar.length;
   const ball = Math.round((togri / Math.max(1, jami)) * 100);
   const { data: att } = await admin.from("attempts").insert({
-    user_id: user.id, turi: "mock", mock_id: data.mockId, nomi: m?.nomi ?? "Sinov",
-    jami, togri, ball, davomiylik: data.davomiylik,
+    user_id: user.id, turi: "mock", mock_id: data.mockId, nomi: m.nomi,
+    jami, togri, ball, davomiylik: Math.max(0, Math.min(86400, Number(data.davomiylik) || 0)),
   }).select("id").single();
   if (att) {
     const rows = natijalar.map((n) => ({ attempt_id: att.id, question_id: n.question_id, tanlangan: n.tanlangan, togri: n.togri, sekund: n.sekund }));

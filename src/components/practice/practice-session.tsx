@@ -4,13 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Check, X, ArrowRight, ChevronLeft, Clock, RotateCcw, Home,
-  PartyPopper, AlarmClock, ClipboardList, Minus,
+  PartyPopper, AlarmClock, ClipboardList, Minus, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { urinishSaqlash, type KlientSavol } from "@/lib/actions";
+import { urinishSaqlash, javobTekshir, type KlientSavol } from "@/lib/actions";
 import { MathText } from "@/components/math-text";
 import { vaqtQisqa, vaqtMatn } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,8 @@ function Ekran({ children }: { children: React.ReactNode }) {
 interface Natija {
   tanlangan: string | null;
   togri: boolean;
+  togriJavob: string;
+  izoh: string;
   sekund: number;
 }
 
@@ -50,6 +52,8 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
   const [tugadi, setTugadi] = React.useState(false);
   const [korish, setKorish] = React.useState(false); // tahlil (review) rejimi
   const [sekund, setSekund] = React.useState(0);
+  const [natija, setNatija] = React.useState<{ togri: boolean; togriJavob: string; izoh: string } | null>(null);
+  const [tekshirilmoqda, setTekshirilmoqda] = React.useState(false);
   const [natijalar, setNatijalar] = React.useState<(Natija | null)[]>(() => savollar.map(() => null));
   const natRef = React.useRef<(Natija | null)[]>(savollar.map(() => null));
   const qStart = React.useRef(0);
@@ -75,7 +79,13 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
   // qiymatini o'qib, 0 chiqarardi.
   function yozib(idx: number, delta: number) {
     if (natRef.current[idx]) return;
-    natRef.current[idx] = { tanlangan, togri: tanlangan === savollar[idx].togri, sekund: delta };
+    natRef.current[idx] = {
+      tanlangan,
+      togri: natija?.togri ?? false,
+      togriJavob: natija?.togriJavob ?? "",
+      izoh: natija?.izoh ?? "",
+      sekund: delta,
+    };
     setNatijalar([...natRef.current]);
   }
 
@@ -84,27 +94,26 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
     setTugadi(true);
     if (!saqlandi.current) {
       saqlandi.current = true;
+      // Serverda qayta baholanadi — bu yerda faqat javoblar yuboriladi.
       const javoblar = savollar.map((s, i) => ({
         question_id: s.id,
         tanlangan: natRef.current[i]?.tanlangan ?? null,
-        togri: natRef.current[i]?.togri ?? false,
         sekund: natRef.current[i]?.sekund ?? 0,
       }));
-      urinishSaqlash({
-        turi: rejim,
-        nomi: rejim === "kurs" ? "Kurs sinovi" : mavzu ?? "Mashq",
-        jami: savollar.length,
-        togri: togriSoni,
-        davomiylik: sekund,
-        javoblar,
-      });
+      urinishSaqlash({ turi: rejim, davomiylik: sekund, javoblar });
     }
   }
 
-  function tekshir() {
-    if (!tanlangan) return;
+  // Serverda tekshiriladi — javob mijozga oldindan yuborilmaydi.
+  async function tekshir() {
+    if (!tanlangan || tekshirilmoqda) return;
+    setTekshirilmoqda(true);
+    const r = await javobTekshir(savol.id, tanlangan);
+    setTekshirilmoqda(false);
+    if (!r) return;
+    setNatija(r);
     setTekshirildi(true);
-    if (tanlangan === savol.togri) setTogriSoni((n) => n + 1);
+    if (r.togri) setTogriSoni((n) => n + 1);
   }
 
   function keyingi() {
@@ -114,6 +123,7 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
     setIndeks((i) => i + 1);
     setTanlangan(null);
     setTekshirildi(false);
+    setNatija(null);
   }
 
   // ── TAHLIL (review) ──
@@ -151,7 +161,7 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
                   <div className="space-y-2">
                     {s.variantlar.map((matn, vi) => {
                       const belgi = BELGILAR[vi];
-                      const togriMi = belgi === s.togri;
+                      const togriMi = belgi === n?.togriJavob;
                       const tanladi = n?.tanlangan === belgi;
                       return (
                         <div
@@ -176,9 +186,9 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
                     })}
                   </div>
 
-                  {s.izoh && (
+                  {n?.izoh && (
                     <div className="rounded-lg border border-border bg-[#FBF6EC] p-3 text-sm text-muted">
-                      <MathText>{s.izoh}</MathText>
+                      <MathText>{n.izoh}</MathText>
                     </div>
                   )}
                 </CardContent>
@@ -276,7 +286,7 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
             {savol.variantlar.map((matn, i) => {
               const belgi = BELGILAR[i];
               const tanlanganMi = tanlangan === belgi;
-              const togriMi = belgi === savol.togri;
+              const togriMi = belgi === natija?.togriJavob;
               const holat = tekshirildi
                 ? togriMi ? "togri" : tanlanganMi ? "xato" : "odatiy"
                 : tanlanganMi ? "tanlangan" : "odatiy";
@@ -308,10 +318,10 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
             })}
           </div>
 
-          {tekshirildi && savol.izoh && (
+          {tekshirildi && natija?.izoh && (
             <div className="animate-fade-in rounded-xl border border-border bg-[#FBF6EC] p-4">
               <p className="mb-1 text-sm font-semibold text-foreground">Izoh</p>
-              <div className="text-sm leading-relaxed text-muted"><MathText>{savol.izoh}</MathText></div>
+              <div className="text-sm leading-relaxed text-muted"><MathText>{natija.izoh}</MathText></div>
             </div>
           )}
         </CardContent>
@@ -338,7 +348,10 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
 
       <div className="mt-6 flex justify-end">
         {!tekshirildi ? (
-          <Button size="lg" onClick={tekshir} disabled={!tanlangan}>Javobni tekshirish</Button>
+          <Button size="lg" onClick={tekshir} disabled={!tanlangan || tekshirilmoqda}>
+            {tekshirilmoqda && <Loader2 className="h-4 w-4 animate-spin" />}
+            Javobni tekshirish
+          </Button>
         ) : (
           <Button size="lg" onClick={keyingi}>
             {indeks + 1 >= savollar.length ? "Yakunlash" : "Keyingi savol"}
