@@ -59,7 +59,9 @@ export async function chiqish() {
 // ── Savollarni olish (mashq uchun) ──
 export interface KlientSavol {
   id: number;
+  bob: string | null;
   mavzu: string;
+  manba_kod: string | null;
   qiyinchilik: string;
   matn: string;
   variantlar: string[];
@@ -91,8 +93,10 @@ export async function savollarOl(params: {
 
   return rows.map((r) => ({
     id: r.id as number,
+    bob: (r.bob as string) ?? null,
     mavzu: r.mavzu as string,
-    qiyinchilik: r.qiyinchilik as string,
+    manba_kod: (r.manba_kod as string) ?? null,
+    qiyinchilik: (r.qiyinchilik as string) ?? "orta",
     matn: r.matn as string,
     variantlar: JSON.parse(r.variantlar as string) as string[],
     togri: r.togri as string,

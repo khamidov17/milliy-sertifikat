@@ -11,9 +11,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { urinishSaqlash, type KlientSavol } from "@/lib/actions";
+import { MathText } from "@/components/math-text";
 import { cn } from "@/lib/utils";
 
-const BELGILAR = ["A", "B", "C", "D"] as const;
+const BELGILAR = ["A", "B", "C", "D", "E"] as const;
 
 interface Props {
   savollar: KlientSavol[];
@@ -128,14 +129,17 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
 
       <Card>
         <CardContent className="space-y-6 p-6 sm:p-8">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {rejim === "kurs" && <Badge variant="accent">{savol.mavzu}</Badge>}
             <Badge variant={savol.qiyinchilik === "qiyin" ? "danger" : savol.qiyinchilik === "orta" ? "warning" : "success"}>
               {savol.qiyinchilik === "oson" ? "Oson" : savol.qiyinchilik === "orta" ? "O'rta" : "Qiyin"}
             </Badge>
+            {savol.manba_kod && <Badge variant="outline">DTM {savol.manba_kod}</Badge>}
           </div>
 
-          <h2 className="text-lg font-semibold leading-relaxed text-foreground text-balance">{savol.matn}</h2>
+          <h2 className="text-lg font-semibold leading-relaxed text-foreground text-balance">
+            <MathText>{savol.matn}</MathText>
+          </h2>
 
           <div className="space-y-3">
             {savol.variantlar.map((matn, i) => {
@@ -167,7 +171,7 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
                   )}>
                     {holat === "togri" ? <Check className="h-4 w-4" /> : holat === "xato" ? <X className="h-4 w-4" /> : belgi}
                   </span>
-                  <span className="flex-1">{matn}</span>
+                  <span className="flex-1"><MathText>{matn}</MathText></span>
                 </button>
               );
             })}
@@ -176,7 +180,7 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
           {tekshirildi && (
             <div className="animate-fade-in rounded-xl border border-border bg-[#FBF6EC] p-4">
               <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-foreground"><Flag className="h-4 w-4 text-primary" /> Izoh</p>
-              <p className="text-sm leading-relaxed text-muted">{savol.izoh}</p>
+              <div className="text-sm leading-relaxed text-muted"><MathText>{savol.izoh}</MathText></div>
             </div>
           )}
         </CardContent>
