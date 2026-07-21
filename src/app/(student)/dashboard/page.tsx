@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   Flame, CalendarClock, Target, ArrowRight, Trophy, TrendingDown,
-  Sparkles, CheckCircle2, PlayCircle, Award, Zap,
+  Sparkles, CheckCircle2, PlayCircle, Award, Zap, Clock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import {
   imtihongachaKunlar, BUGUNGI_MAQSAD,
 } from "@/lib/data";
 import { joriyFoydalanuvchi as getUser } from "@/lib/auth";
+import { foydalanuvchiStat } from "@/lib/stats";
+import { vaqtMatn } from "@/lib/utils";
 
 const faoliyatIkon = {
   mashq: Zap,
@@ -23,8 +25,11 @@ const faoliyatIkon = {
 export default async function DashboardPage() {
   const hisob = await getUser();
   const u = { ...joriyFoydalanuvchi, ism: hisob?.ism ?? joriyFoydalanuvchi.ism };
+  const stat = hisob ? foydalanuvchiStat(hisob.id) : null;
   const kunlar = imtihongachaKunlar();
-  const oxirgi = urinishlar[0];
+  const oxirgi = stat?.oxirgi
+    ? { imtihonNomi: stat.oxirgi.nomi, ball: stat.oxirgi.ball, togri: stat.oxirgi.togri, jami: stat.oxirgi.jami }
+    : urinishlar[0];
   const maqsadFoiz = Math.round((BUGUNGI_MAQSAD.bajarildi / BUGUNGI_MAQSAD.jami) * 100);
 
   const zaifMavzular = [...mavzular]
@@ -60,18 +65,20 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Streak */}
+        {/* Umumiy sarflangan vaqt (real) */}
         <Card>
           <CardContent className="flex items-center justify-between p-5">
             <div className="space-y-1">
               <p className="flex items-center gap-1.5 text-xs font-medium text-muted">
-                <Flame className="h-4 w-4 text-warning" /> Joriy seriya
+                <Clock className="h-4 w-4 text-primary" /> Umumiy sarflangan vaqt
               </p>
-              <p className="text-3xl font-bold text-foreground">{u.seriya} kun</p>
-              <p className="text-xs text-success">Zo'r natija, davom eting!</p>
+              <p className="text-3xl font-bold text-foreground">{vaqtMatn(stat?.jamiVaqt ?? 0)}</p>
+              <p className="text-xs text-muted">
+                {stat?.jamiSavol ?? 0} ta savol · {stat?.urinishlar ?? 0} ta mashq
+              </p>
             </div>
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-warning/10">
-              <Flame className="h-7 w-7 text-warning" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
+              <Clock className="h-7 w-7 text-primary" />
             </div>
           </CardContent>
         </Card>
