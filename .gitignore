@@ -27,6 +27,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
+# local sqlite database
+/.data
+
 # editor
 .vscode/
 .idea/
+.gstack/

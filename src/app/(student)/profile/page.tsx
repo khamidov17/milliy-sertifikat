@@ -27,7 +27,7 @@ export default function ProfilePage() {
 
       {/* Profil sarlavhasi */}
       <Card className="overflow-hidden">
-        <div className="h-24 bg-primary" style={{ backgroundImage: "linear-gradient(120deg,#8E2C3A,#74222F)" }} />
+        <div className="h-24 bg-primary" style={{ backgroundImage: "linear-gradient(120deg,#0F766E,#0C5F59)" }} />
         <CardContent className="p-6">
           <div className="-mt-16 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end">

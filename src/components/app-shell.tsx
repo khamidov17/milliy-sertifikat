@@ -11,6 +11,7 @@ import {
 import { Logo } from "./logo";
 import { Avatar } from "./ui/avatar";
 import { type NavElement, type IconKey } from "./nav-config";
+import { chiqish } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<IconKey, LucideIcon> = {
@@ -91,9 +92,11 @@ export function AppShell({ nav, children, user, rolBadge }: AppShellProps) {
             </p>
             <p className="truncate text-xs text-muted">{user.rolLabel}</p>
           </div>
-          <Link href="/login" className="rounded-lg p-1.5 text-muted transition-colors hover:bg-[#F1E9D8] hover:text-danger" aria-label="Chiqish">
-            <LogOut className="h-4 w-4" />
-          </Link>
+          <form action={chiqish}>
+            <button type="submit" className="rounded-lg p-1.5 text-muted transition-colors hover:bg-[#F1E9D8] hover:text-danger" aria-label="Chiqish">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </form>
         </div>
         <p className="px-3 text-[11px] font-medium text-muted/70">Versiya 1.0.0</p>
       </div>

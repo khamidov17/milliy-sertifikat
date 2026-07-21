@@ -1,14 +1,14 @@
 import { AppShell } from "@/components/app-shell";
 import { adminNav } from "@/components/nav-config";
+import { foydalanuvchiTalab } from "@/lib/auth";
 
-// Demo: admin roli bilan kiramiz. Real ilovada rol sessiyadan olinadi
-// va nav (teacherNav / adminNav) shunga qarab tanlanadi.
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const u = await foydalanuvchiTalab("admin");
   return (
     <AppShell
       nav={adminNav}
-      rolBadge="Administrator"
-      user={{ ism: "Alisher", familiya: "Rustamov", rolLabel: "Administrator" }}
+      rolBadge={u.rol === "admin" ? "Administrator" : "O'qituvchi"}
+      user={{ ism: u.ism, familiya: u.familiya, rolLabel: u.rol === "admin" ? "Administrator" : "O'qituvchi" }}
     >
       {children}
     </AppShell>

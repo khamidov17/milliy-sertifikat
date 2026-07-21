@@ -1,17 +1,13 @@
 import { AppShell } from "@/components/app-shell";
 import { studentNav } from "@/components/nav-config";
-import { joriyFoydalanuvchi } from "@/lib/data";
+import { foydalanuvchiTalab } from "@/lib/auth";
 
-export default function StudentLayout({ children }: { children: React.ReactNode }) {
-  const u = joriyFoydalanuvchi;
+export default async function StudentLayout({ children }: { children: React.ReactNode }) {
+  const u = await foydalanuvchiTalab();
   return (
     <AppShell
       nav={studentNav}
-      user={{
-        ism: u.ism,
-        familiya: u.familiya,
-        rolLabel: u.obuna === "premium" ? "Premium a'zo" : "O'quvchi",
-      }}
+      user={{ ism: u.ism, familiya: u.familiya, rolLabel: "O'quvchi" }}
     >
       {children}
     </AppShell>

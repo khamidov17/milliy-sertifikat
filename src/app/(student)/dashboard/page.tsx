@@ -11,6 +11,7 @@ import {
   joriyFoydalanuvchi, mavzular, fanlar, urinishlar, faoliyat,
   imtihongachaKunlar, BUGUNGI_MAQSAD,
 } from "@/lib/data";
+import { joriyFoydalanuvchi as getUser } from "@/lib/auth";
 
 const faoliyatIkon = {
   mashq: Zap,
@@ -19,8 +20,9 @@ const faoliyatIkon = {
   seriya: Flame,
 } as const;
 
-export default function DashboardPage() {
-  const u = joriyFoydalanuvchi;
+export default async function DashboardPage() {
+  const hisob = await getUser();
+  const u = { ...joriyFoydalanuvchi, ism: hisob?.ism ?? joriyFoydalanuvchi.ism };
   const kunlar = imtihongachaKunlar();
   const oxirgi = urinishlar[0];
   const maqsadFoiz = Math.round((BUGUNGI_MAQSAD.bajarildi / BUGUNGI_MAQSAD.jami) * 100);

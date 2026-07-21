@@ -2,27 +2,27 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Mail, AtSign, Lock, Loader2 } from "lucide-react";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
+import { User, Lock, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TelegramButton } from "@/components/telegram-button";
-import { cn } from "@/lib/utils";
+import { kirish, type AuthHolat } from "@/lib/actions";
 
-type Usul = "email" | "username";
+function Yuborish() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" size="lg" className="w-full" disabled={pending}>
+      {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+      Kirish
+    </Button>
+  );
+}
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [usul, setUsul] = React.useState<Usul>("email");
-  const [yuklanmoqda, setYuklanmoqda] = React.useState(false);
-
-  function jonatish(e: React.FormEvent) {
-    e.preventDefault();
-    setYuklanmoqda(true);
-    // Demo: backend ulanmagan, boshqaruv paneliga o'tamiz.
-    setTimeout(() => router.push("/dashboard"), 700);
-  }
+  const [holat, action] = useActionState<AuthHolat, FormData>(kirish, {});
 
   return (
     <div className="space-y-7">
@@ -39,66 +39,44 @@ export default function LoginPage() {
         <div className="h-px flex-1 bg-border" />
       </div>
 
-      {/* Usul tanlash */}
-      <div className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-card p-1">
-        {(["email", "username"] as Usul[]).map((u) => (
-          <button
-            key={u}
-            type="button"
-            onClick={() => setUsul(u)}
-            className={cn(
-              "rounded-lg py-2 text-sm font-medium transition-all duration-200",
-              usul === u ? "bg-primary text-white shadow-soft" : "text-muted hover:text-foreground"
-            )}
-          >
-            {u === "email" ? "Email" : "Foydalanuvchi nomi"}
-          </button>
-        ))}
-      </div>
+      <form action={action} className="space-y-4">
+        {holat.xato && (
+          <div className="flex items-center gap-2 rounded-xl border border-danger/20 bg-danger/8 px-3.5 py-2.5 text-sm text-danger">
+            <AlertCircle className="h-4 w-4 shrink-0" /> {holat.xato}
+          </div>
+        )}
 
-      <form onSubmit={jonatish} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="idf">{usul === "email" ? "Email manzil" : "Foydalanuvchi nomi"}</Label>
+          <Label htmlFor="idf">Foydalanuvchi nomi yoki email</Label>
           <div className="relative">
-            {usul === "email" ? (
-              <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            ) : (
-              <AtSign className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            )}
-            <Input
-              id="idf"
-              type={usul === "email" ? "email" : "text"}
-              placeholder={usul === "email" ? "siz@example.uz" : "foydalanuvchi_nomi"}
-              className="pl-10"
-              required
-            />
+            <User className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <Input id="idf" name="idf" placeholder="dilnoza" className="pl-10" required autoComplete="username" />
           </div>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="parol">Parol</Label>
-            <Link href="#" className="text-xs font-medium text-primary hover:text-primary-hover">
-              Parolni unutdingizmi?
-            </Link>
+            <Link href="#" className="text-xs font-medium text-primary hover:text-primary-hover">Parolni unutdingizmi?</Link>
           </div>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <Input id="parol" type="password" placeholder="••••••••" className="pl-10" required />
+            <Input id="parol" name="parol" type="password" placeholder="••••••••" className="pl-10" required autoComplete="current-password" />
           </div>
         </div>
 
-        <Button type="submit" size="lg" className="w-full" disabled={yuklanmoqda}>
-          {yuklanmoqda && <Loader2 className="h-4 w-4 animate-spin" />}
-          Kirish
-        </Button>
+        <Yuborish />
       </form>
+
+      <div className="rounded-xl border border-border bg-[#FBF6EC] px-4 py-3 text-xs text-muted">
+        <p className="mb-1 font-semibold text-foreground">Demo hisoblar</p>
+        <p>O'quvchi: <span className="font-medium text-foreground">dilnoza / parol123</span></p>
+        <p>Admin: <span className="font-medium text-foreground">admin / parol123</span></p>
+      </div>
 
       <p className="text-center text-sm text-muted">
         Hisobingiz yo'qmi?{" "}
-        <Link href="/register" className="font-semibold text-primary hover:text-primary-hover">
-          Ro'yxatdan o'ting
-        </Link>
+        <Link href="/register" className="font-semibold text-primary hover:text-primary-hover">Ro'yxatdan o'ting</Link>
       </p>
     </div>
   );

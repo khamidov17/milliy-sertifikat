@@ -12,8 +12,8 @@ const config: Config = {
         background: "#F8F4EA",
         card: "#FFFDF8",
         primary: {
-          DEFAULT: "#8E2C3A",
-          hover: "#74222F",
+          DEFAULT: "#0F766E",
+          hover: "#0C5F59",
         },
         accent: "#D9C29C",
         border: "#E8DDC7",

@@ -10,7 +10,7 @@ import type {
 // ────────────────────────────────────────────────────────────────────────────
 
 export const fanlar: Fan[] = [
-  { id: "mat", nomi: "Matematika", slug: "matematika", emoji: "📐", rang: "#8E2C3A", savollarSoni: 2140, tavsif: "Algebra, geometriya, analiz va ehtimollik" },
+  { id: "mat", nomi: "Matematika", slug: "matematika", emoji: "📐", rang: "#0F766E", savollarSoni: 2140, tavsif: "Algebra, geometriya, analiz va ehtimollik" },
   { id: "fiz", nomi: "Fizika", slug: "fizika", emoji: "⚛️", rang: "#2E5A88", savollarSoni: 1680, tavsif: "Mexanika, elektr, optika va termodinamika" },
   { id: "kim", nomi: "Kimyo", slug: "kimyo", emoji: "🧪", rang: "#2E7D32", savollarSoni: 1420, tavsif: "Anorganik, organik va analitik kimyo" },
   { id: "bio", nomi: "Biologiya", slug: "biologiya", emoji: "🧬", rang: "#6A4C93", savollarSoni: 1560, tavsif: "Botanika, zoologiya, anatomiya va genetika" },
