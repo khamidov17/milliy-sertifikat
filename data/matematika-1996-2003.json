@@ -1,0 +1,515 @@
+[
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-7-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Hisoblang: $21\\cdot 18 - 19\\cdot 18 + 18\\cdot 17 - 17\\cdot 16 + 16\\cdot 15 - 15\\cdot 14$",
+    "rasm": null,
+    "variantlar": [
+      "50",
+      "100",
+      "98",
+      "24",
+      "110"
+    ],
+    "togri": "B",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-1-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Ifodaning qiymatini toping: $26\\cdot 25 - 25\\cdot 24 + 24\\cdot 23 - 23\\cdot 22 - 12\\cdot 8$",
+    "rasm": null,
+    "variantlar": [
+      "106",
+      "1",
+      "54",
+      "8",
+      "0"
+    ],
+    "togri": "E",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "98-5-8",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "oson",
+    "matn": "$50$ dan kichik tub sonlar nechta?",
+    "rasm": null,
+    "variantlar": [
+      "10",
+      "15",
+      "17",
+      "9",
+      "16"
+    ],
+    "togri": "B",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "00-5-6",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "$48$ sonining barcha natural bo'luvchilari yig'indisini toping.",
+    "rasm": null,
+    "variantlar": [
+      "123",
+      "100",
+      "108",
+      "124",
+      "128"
+    ],
+    "togri": "D",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "02-12-31",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "oson",
+    "matn": "$7$ ga karrali ikki xonali natural sonlar nechta?",
+    "rasm": null,
+    "variantlar": [
+      "14",
+      "12",
+      "15",
+      "11",
+      "13"
+    ],
+    "togri": "E",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "01-2-3",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "$999^{2}$ ni hisoblang.",
+    "rasm": null,
+    "variantlar": [
+      "997999",
+      "998001",
+      "999001",
+      "998991",
+      "997001"
+    ],
+    "togri": "B",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-3-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "oson",
+    "matn": "Ifodaning qiymatini toping: $12 - 6 : 3 + 2\\cdot 4$",
+    "rasm": null,
+    "variantlar": [
+      "16",
+      "10",
+      "18",
+      "48",
+      "$4\\frac{2}{3}$"
+    ],
+    "togri": "C",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-9-52",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Ifodaning qiymatini toping: $18\\cdot 36 - 16\\cdot 36 + 24\\cdot 27 - 25\\cdot 24 - 21\\cdot 5$",
+    "rasm": null,
+    "variantlar": [
+      "45",
+      "321",
+      "0",
+      "15",
+      "115"
+    ],
+    "togri": "D",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-10-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Ifodaning qiymatini toping: $21\\cdot 13 + 24\\cdot 13 + 45\\cdot 12 + 25\\cdot 44 - 89\\cdot 24$",
+    "rasm": null,
+    "variantlar": [
+      "79",
+      "126",
+      "89",
+      "0",
+      "1"
+    ],
+    "togri": "C",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-11-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "oson",
+    "matn": "Ifodaning qiymatini toping: $15 - 9 : 3 + 4\\cdot 3$",
+    "rasm": null,
+    "variantlar": [
+      "24",
+      "18",
+      "48",
+      "6",
+      "$7\\frac{1}{3}$"
+    ],
+    "togri": "A",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-12-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "oson",
+    "matn": "Ifodaning qiymatini toping: $18 - 12 : 2 + 5\\cdot 3$",
+    "rasm": null,
+    "variantlar": [
+      "$15\\frac{1}{2}$",
+      "51",
+      "24",
+      "54",
+      "27"
+    ],
+    "togri": "E",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "97-3-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Hisoblang: $21\\cdot 17 - 18\\cdot 17 + 17\\cdot 15 - 15\\cdot 14 + 18\\cdot 13 - 15\\cdot 13$",
+    "rasm": null,
+    "variantlar": [
+      "125",
+      "135",
+      "205",
+      "180",
+      "165"
+    ],
+    "togri": "B",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "97-7-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Hisoblang: $36\\cdot 24 - 33\\cdot 24 + 17\\cdot 11 - 14\\cdot 11 + 18\\cdot 16 - 15\\cdot 16$",
+    "rasm": null,
+    "variantlar": [
+      "166",
+      "155",
+      "180",
+      "235",
+      "153"
+    ],
+    "togri": "E",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "97-10-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Hisoblang: $27\\cdot 23 - 24\\cdot 23 + 21\\cdot 19 - 18\\cdot 19 + 17\\cdot 11 - 14\\cdot 11$",
+    "rasm": null,
+    "variantlar": [
+      "165",
+      "159",
+      "143",
+      "203",
+      "189"
+    ],
+    "togri": "B",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "98-3-9",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "qiyin",
+    "matn": "Hisoblang: $27048\\cdot 27044 - 27047\\cdot 27043$",
+    "rasm": null,
+    "variantlar": [
+      "60491",
+      "58051",
+      "57091",
+      "54091",
+      "56091"
+    ],
+    "togri": "D",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "98-10-57",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "qiyin",
+    "matn": "Hisoblang: $45815\\cdot 45818 - 45814\\cdot 45816$",
+    "rasm": null,
+    "variantlar": [
+      "137446",
+      "137447",
+      "241584",
+      "241586",
+      "241585"
+    ],
+    "togri": "A",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "00-5-4",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Hisoblang: $139\\cdot 15 + 18\\cdot 139 + 15\\cdot 261 + 18\\cdot 261$",
+    "rasm": null,
+    "variantlar": [
+      "13200",
+      "14500",
+      "15100",
+      "16200",
+      "17500"
+    ],
+    "togri": "A",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "02-12-33",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "$249\\cdot 250 - 250\\cdot 251 + 251\\cdot 252 - 252\\cdot 253 + 253\\cdot 254 - 254\\cdot 255$ ni hisoblang.",
+    "rasm": null,
+    "variantlar": [
+      "$-1514$",
+      "$-1516$",
+      "$-1512$",
+      "$-1518$",
+      "$-1510$"
+    ],
+    "togri": "C",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "03-8-30",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "qiyin",
+    "matn": "$4^{12}+4^{12}+4^{12}+4^{12}$ yig'indisining yarmini hisoblang.",
+    "rasm": null,
+    "variantlar": [
+      "$2^{25}$",
+      "$2^{24}$",
+      "$4^{48}$",
+      "$2\\cdot 4^{16}$",
+      "$4^{25}$"
+    ],
+    "togri": "A",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "03-10-1",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "$2001\\cdot 2004 - 2002\\cdot 2003$ ni hisoblang.",
+    "rasm": null,
+    "variantlar": [
+      "$-2$",
+      "2",
+      "0",
+      "2000",
+      "4"
+    ],
+    "togri": "A",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "03-10-16",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Boshlang'ich hisoblashlar",
+    "qiyinchilik": "orta",
+    "matn": "Dastlabki $100$ ta natural sonlarni yozganda, $7$ raqami necha marta takrorlanadi?",
+    "rasm": null,
+    "variantlar": [
+      "10",
+      "20",
+      "19",
+      "18",
+      "17"
+    ],
+    "togri": "B",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-13-11",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Oxirgi raqam",
+    "qiyinchilik": "orta",
+    "matn": "$2^{100}$ ning oxirgi raqamini toping.",
+    "rasm": null,
+    "variantlar": [
+      "2",
+      "0",
+      "4",
+      "6",
+      "8"
+    ],
+    "togri": "D",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-3-71",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Oxirgi raqam",
+    "qiyinchilik": "orta",
+    "matn": "$8^{99}$ ning oxirgi raqamini toping.",
+    "rasm": null,
+    "variantlar": [
+      "0",
+      "2",
+      "4",
+      "6",
+      "8"
+    ],
+    "togri": "B",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-9-11",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Oxirgi raqam",
+    "qiyinchilik": "orta",
+    "matn": "$7^{100}$ ning oxirgi raqamini toping.",
+    "rasm": null,
+    "variantlar": [
+      "3",
+      "5",
+      "7",
+      "9",
+      "1"
+    ],
+    "togri": "E",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "96-12-69",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Oxirgi raqam",
+    "qiyinchilik": "orta",
+    "matn": "$3^{101}$ ning oxirgi raqamini toping.",
+    "rasm": null,
+    "variantlar": [
+      "3",
+      "1",
+      "7",
+      "9",
+      "5"
+    ],
+    "togri": "A",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "97-5-13",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Oxirgi raqam",
+    "qiyinchilik": "oson",
+    "matn": "$6^{1971}$ ning oxirgi raqamini toping.",
+    "rasm": null,
+    "variantlar": [
+      "2",
+      "6",
+      "8",
+      "4",
+      "1"
+    ],
+    "togri": "B",
+    "izoh": ""
+  },
+  {
+    "kitob": "Matematika 1996-2003",
+    "manba_kod": "97-9-13",
+    "fan": "matematika",
+    "bob": "Natural va butun sonlar",
+    "mavzu": "Oxirgi raqam",
+    "qiyinchilik": "qiyin",
+    "matn": "$2^{1971}$ ning oxirgi raqamini toping.",
+    "rasm": null,
+    "variantlar": [
+      "2",
+      "6",
+      "4",
+      "8",
+      "0"
+    ],
+    "togri": "D",
+    "izoh": ""
+  }
+]
