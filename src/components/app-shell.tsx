@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Menu, X, LogOut, LayoutDashboard, PencilLine, Target, Trophy, User,
   FileQuestion, GraduationCap, BookOpen, Users, CreditCard, BarChart3,
-  Settings, type LucideIcon,
+  Settings, History, type LucideIcon,
 } from "lucide-react";
 import { Logo } from "./logo";
 import { Avatar } from "./ui/avatar";
@@ -27,6 +27,7 @@ const ICONS: Record<IconKey, LucideIcon> = {
   card: CreditCard,
   chart: BarChart3,
   settings: Settings,
+  history: History,
 };
 
 interface AppShellProps {

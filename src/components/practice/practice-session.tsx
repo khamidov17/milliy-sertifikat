@@ -51,6 +51,7 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
   const [korish, setKorish] = React.useState(false); // tahlil (review) rejimi
   const [sekund, setSekund] = React.useState(0);
   const [natijalar, setNatijalar] = React.useState<(Natija | null)[]>(() => savollar.map(() => null));
+  const natRef = React.useRef<(Natija | null)[]>(savollar.map(() => null));
   const qStart = React.useRef(0);
   const saqlandi = React.useRef(false);
 
@@ -73,13 +74,9 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
   // beriladi, aks holda setNatijalar updateri kechroq ishlab, qStart yangilangan
   // qiymatini o'qib, 0 chiqarardi.
   function yozib(idx: number, delta: number) {
-    const rec: Natija = { tanlangan, togri: tanlangan === savollar[idx].togri, sekund: delta };
-    setNatijalar((prev) => {
-      if (prev[idx]) return prev;
-      const c = [...prev];
-      c[idx] = rec;
-      return c;
-    });
+    if (natRef.current[idx]) return;
+    natRef.current[idx] = { tanlangan, togri: tanlangan === savollar[idx].togri, sekund: delta };
+    setNatijalar([...natRef.current]);
   }
 
   function yakunla() {
@@ -87,7 +84,20 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
     setTugadi(true);
     if (!saqlandi.current) {
       saqlandi.current = true;
-      urinishSaqlash({ rejim, mavzu, jami: savollar.length, togri: togriSoni, davomiylik: sekund });
+      const javoblar = savollar.map((s, i) => ({
+        question_id: s.id,
+        tanlangan: natRef.current[i]?.tanlangan ?? null,
+        togri: natRef.current[i]?.togri ?? false,
+        sekund: natRef.current[i]?.sekund ?? 0,
+      }));
+      urinishSaqlash({
+        turi: rejim,
+        nomi: rejim === "kurs" ? "Kurs sinovi" : mavzu ?? "Mashq",
+        jami: savollar.length,
+        togri: togriSoni,
+        davomiylik: sekund,
+        javoblar,
+      });
     }
   }
 
@@ -306,6 +316,25 @@ export function PracticeSession({ savollar, sarlavha, rejim, mavzu, limitSekund,
           )}
         </CardContent>
       </Card>
+
+      {/* Savollar navigatori — javob berilganda rangli bo'ladi */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5">
+        {savollar.map((_, i) => {
+          const berilgan = !!natijalar[i];
+          const cur = i === indeks;
+          return (
+            <span
+              key={i}
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-bold transition-colors",
+                cur ? "border-primary text-primary ring-2 ring-primary/30" : berilgan ? "border-primary bg-primary text-white" : "border-border text-muted",
+              )}
+            >
+              {i + 1}
+            </span>
+          );
+        })}
+      </div>
 
       <div className="mt-6 flex justify-end">
         {!tekshirildi ? (

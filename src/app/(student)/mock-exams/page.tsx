@@ -1,127 +1,108 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import {
-  Target, Clock, FileText, Crown, Play, History,
-  CheckCircle2, ArrowRight, Zap,
+  Target, Clock, FileText, Crown, Play, Loader2, Lock, CalendarClock,
+  ClipboardList, CheckCircle2,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { sinovImtihonlar, urinishlar } from "@/lib/data";
+import { MockRunner } from "@/components/practice/mock-runner";
+import { mockRoyxat, mockSavollari, type MockRoyxatItem, type MockBoshlash } from "@/lib/actions";
+import { formatSana } from "@/lib/utils";
 
 export default function MockExamsPage() {
-  const mini = sinovImtihonlar.filter((s) => s.turi === "mini");
-  const toliq = sinovImtihonlar.filter((s) => s.turi === "toliq");
-  const ortacha = Math.round(urinishlar.reduce((a, u) => a + u.ball, 0) / urinishlar.length);
+  const [royxat, setRoyxat] = React.useState<MockRoyxatItem[] | null>(null);
+  const [yuklanmoqda, setYuklanmoqda] = React.useState<number | null>(null);
+  const [faol, setFaol] = React.useState<{ id: number; data: MockBoshlash } | null>(null);
+
+  React.useEffect(() => {
+    mockRoyxat().then(setRoyxat);
+  }, []);
+
+  async function boshla(id: number) {
+    setYuklanmoqda(id);
+    const r = await mockSavollari(id);
+    setYuklanmoqda(null);
+    if ("xato" in r) return alert(r.xato);
+    setFaol({ id, data: r });
+  }
+
+  if (faol) {
+    return (
+      <MockRunner
+        mockId={faol.id}
+        nomi={faol.data.nomi}
+        davomiylikDaqiqa={faol.data.davomiylikDaqiqa}
+        savollar={faol.data.savollar}
+        onChiqish={() => { setFaol(null); mockRoyxat().then(setRoyxat); }}
+      />
+    );
+  }
 
   return (
     <div className="animate-fade-in space-y-8">
-      <div className="space-y-1.5">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-[28px]">Sinov imtihonlari</h1>
-        <p className="text-[15px] text-muted">Rasmiy imtihon formatidagi simulyatsiyalar bilan o'zingizni sinab ko'ring.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-[28px]">Sinov imtihonlari</h1>
+          <p className="text-[15px] text-muted">Rasmiy formatdagi imtihonlar — belgilangan vaqt ichida yeching.</p>
+        </div>
+        <Button asChild variant="secondary"><Link href="/history"><ClipboardList className="h-4 w-4" /> Tarixim</Link></Button>
       </div>
 
-      {/* Xulosa ko'rsatkichlari */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card><CardContent className="flex items-center gap-4 p-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/8 text-primary"><History className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold text-foreground">{urinishlar.length}</p><p className="text-xs text-muted">Jami urinishlar</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="flex items-center gap-4 p-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-success/10 text-success"><Zap className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold text-foreground">{ortacha}%</p><p className="text-xs text-muted">O'rtacha natija</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="flex items-center gap-4 p-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-warning/10 text-warning"><Target className="h-5 w-5" /></div>
-          <div><p className="text-2xl font-bold text-foreground">{Math.max(...urinishlar.map((u) => u.ball))}%</p><p className="text-xs text-muted">Eng yaxshi natija</p></div>
-        </CardContent></Card>
-      </div>
-
-      {/* Mini Mock */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-foreground">Mini sinov</h2>
-          <Badge variant="neutral">Tezkor</Badge>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {mini.map((s) => (
-            <Card key={s.id} className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-soft-lg">
-              <CardContent className="space-y-4 p-5">
-                <div className="flex items-center justify-between">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F1E9D8] text-primary"><FileText className="h-5 w-5" /></span>
-                  {!s.premium && <Badge variant="success">Bepul</Badge>}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">{s.nomi}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-muted">{s.tavsif}</p>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-muted">
-                  <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5" /> {s.savollarSoni} savol</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {s.davomiylikDaqiqa} daqiqa</span>
-                </div>
-                <Button className="w-full" size="sm"><Play className="h-4 w-4" /> Imtihonni boshlash</Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Full Mock */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-foreground">To'liq sinov</h2>
-          <Badge variant="accent"><Crown className="h-3 w-3" /> Premium</Badge>
-        </div>
+      {royxat === null ? (
+        <div className="flex items-center justify-center py-20 text-muted"><Loader2 className="h-6 w-6 animate-spin" /></div>
+      ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {toliq.map((s) => (
-            <Card key={s.id} className="relative overflow-hidden transition-all duration-200 hover:shadow-soft-lg">
-              <div className="absolute right-0 top-0 h-24 w-24 rounded-bl-[60px] bg-primary/5" />
-              <CardContent className="relative space-y-4 p-6">
-                <div className="flex items-center justify-between">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white shadow-soft"><Target className="h-6 w-6" /></span>
-                  <Badge variant="accent"><Crown className="h-3 w-3" /> Premium</Badge>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">{s.nomi}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-muted">{s.tavsif}</p>
-                </div>
-                <div className="flex items-center gap-5 text-sm text-muted">
-                  <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> {s.savollarSoni} savol</span>
-                  <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {s.davomiylikDaqiqa} daqiqa</span>
-                </div>
-                <Button className="w-full"><Play className="h-4 w-4" /> Imtihonni boshlash</Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+          {royxat.map((m) => {
+            const ochiq = m.holat === "ochiq";
+            return (
+              <Card key={m.id} className="relative overflow-hidden transition-all duration-200 hover:shadow-soft-lg">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-center justify-between">
+                    <span className={`flex h-12 w-12 items-center justify-center rounded-xl ${m.turi === "toliq" ? "bg-primary text-white shadow-soft" : "bg-[#F1E9D8] text-primary"}`}>
+                      <Target className="h-6 w-6" />
+                    </span>
+                    {m.turi === "toliq" ? <Badge variant="accent"><Crown className="h-3 w-3" /> To'liq</Badge> : <Badge variant="neutral">Mini</Badge>}
+                  </div>
 
-      {/* Past Attempts */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">O'tgan urinishlar</h2>
-        <Card>
-          <CardContent className="divide-y divide-border p-0">
-            {urinishlar.map((u) => (
-              <Link
-                key={u.id}
-                href="#"
-                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[#F1E9D8]/50"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/8 text-primary">
-                  {u.ball >= 85 ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Target className="h-5 w-5" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{u.imtihonNomi}</p>
-                  <p className="text-xs text-muted">{u.sana} · {u.davomiylik} · {u.togri}/{u.jami} to'g'ri</p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${u.ball >= 85 ? "text-success" : u.ball >= 60 ? "text-warning" : "text-danger"}`}>{u.ball}%</p>
-                </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted" />
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      </section>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">{m.nomi}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted">{m.tavsif}</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted">
+                    <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> {m.savollarSoni} savol</span>
+                    <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {m.davomiylikDaqiqa} daqiqa</span>
+                  </div>
+
+                  {/* Holat */}
+                  {ochiq ? (
+                    <Button className="w-full" disabled={yuklanmoqda === m.id} onClick={() => boshla(m.id)}>
+                      {yuklanmoqda === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Imtihonni boshlash
+                    </Button>
+                  ) : m.holat === "kelgusi" ? (
+                    <div className="flex items-center justify-center gap-2 rounded-xl bg-warning/8 py-3 text-sm font-medium text-warning">
+                      <CalendarClock className="h-4 w-4" /> Ochiladi: {m.boshlanish ? formatSana(new Date(m.boshlanish)) : "—"}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center gap-2 rounded-xl bg-[#F1E9D8] py-3 text-sm font-medium text-muted">
+                      <Lock className="h-4 w-4" /> Muddati tugagan
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+          {royxat.length === 0 && (
+            <div className="col-span-full flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-16 text-muted">
+              <CheckCircle2 className="h-8 w-8" /> Hozircha imtihonlar yo'q
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

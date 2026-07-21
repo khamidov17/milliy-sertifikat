@@ -29,9 +29,9 @@ export function foydalanuvchiStat(userId: number): FoydalanuvchiStat {
 
   const last = db()
     .prepare(
-      "SELECT rejim, mavzu, ball, togri, jami FROM attempts WHERE user_id = ? ORDER BY id DESC LIMIT 1"
+      "SELECT turi, nomi, ball, togri, jami FROM attempts WHERE user_id = ? ORDER BY id DESC LIMIT 1"
     )
-    .get(userId) as { rejim: string; mavzu: string | null; ball: number; togri: number; jami: number } | undefined;
+    .get(userId) as { turi: string; nomi: string | null; ball: number; togri: number; jami: number } | undefined;
 
   return {
     urinishlar: agg.urinishlar,
@@ -39,7 +39,7 @@ export function foydalanuvchiStat(userId: number): FoydalanuvchiStat {
     jamiTogri: agg.jamiTogri,
     jamiVaqt: agg.jamiVaqt,
     oxirgi: last
-      ? { nomi: last.mavzu ?? (last.rejim === "kurs" ? "Kurs sinovi" : "Mashq"), ball: last.ball, togri: last.togri, jami: last.jami }
+      ? { nomi: last.nomi ?? (last.turi === "kurs" ? "Kurs sinovi" : "Mashq"), ball: last.ball, togri: last.togri, jami: last.jami }
       : undefined,
   };
 }

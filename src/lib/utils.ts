@@ -17,6 +17,12 @@ export function pluralSoat(n: number): string {
   return `${n} soat`;
 }
 
+// Epoch (ms) → "18-iyul, 2026, 14:30".
+export function vaqtSana(epoch: number): string {
+  const d = new Date(epoch);
+  return `${formatSana(d)}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 // Soniyani "mm:ss" ko'rinishida (taymer va har bir savol vaqti uchun).
 export function vaqtQisqa(sekund: number): string {
   const m = Math.floor(sekund / 60);

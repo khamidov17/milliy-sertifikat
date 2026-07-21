@@ -6,7 +6,7 @@
 export type IconKey =
   | "dashboard" | "practice" | "target" | "trophy" | "user"
   | "question" | "grad" | "book" | "users" | "card"
-  | "chart" | "settings";
+  | "chart" | "settings" | "history";
 
 export interface NavElement {
   nomi: string;
@@ -18,6 +18,7 @@ export const studentNav: NavElement[] = [
   { nomi: "Boshqaruv paneli", href: "/dashboard", icon: "dashboard" },
   { nomi: "Mashq", href: "/practice", icon: "practice" },
   { nomi: "Sinov imtihonlari", href: "/mock-exams", icon: "target" },
+  { nomi: "Tarix", href: "/history", icon: "history" },
   { nomi: "Reyting", href: "/leaderboard", icon: "trophy" },
   { nomi: "Profil", href: "/profile", icon: "user" },
 ];
