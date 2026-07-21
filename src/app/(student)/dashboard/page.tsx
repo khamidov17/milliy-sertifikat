@@ -25,7 +25,7 @@ const faoliyatIkon = {
 export default async function DashboardPage() {
   const hisob = await getUser();
   const u = { ...joriyFoydalanuvchi, ism: hisob?.ism ?? joriyFoydalanuvchi.ism };
-  const stat = hisob ? foydalanuvchiStat(hisob.id) : null;
+  const stat = hisob ? await foydalanuvchiStat() : null;
   const kunlar = imtihongachaKunlar();
   const oxirgi = stat?.oxirgi
     ? { imtihonNomi: stat.oxirgi.nomi, ball: stat.oxirgi.ball, togri: stat.oxirgi.togri, jami: stat.oxirgi.jami }

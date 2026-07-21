@@ -24,6 +24,11 @@ function Yuborish() {
 export default function LoginPage() {
   const [holat, action] = useActionState<AuthHolat, FormData>(kirish, {});
 
+  React.useEffect(() => {
+    // Hard navigatsiya — yangi sessiya cookie'sini kafolatli yuboradi.
+    if (holat.ok && holat.next) window.location.assign(holat.next);
+  }, [holat]);
+
   return (
     <div className="space-y-7">
       <div className="space-y-2">

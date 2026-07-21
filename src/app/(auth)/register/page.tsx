@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
@@ -23,6 +24,10 @@ function Yuborish() {
 export default function RegisterPage() {
   const [holat, action] = useActionState<AuthHolat, FormData>(royxatdanOtish, {});
 
+  React.useEffect(() => {
+    if (holat.ok && holat.next) window.location.assign(holat.next);
+  }, [holat]);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -42,6 +47,11 @@ export default function RegisterPage() {
         {holat.xato && (
           <div className="flex items-center gap-2 rounded-xl border border-danger/20 bg-danger/8 px-3.5 py-2.5 text-sm text-danger">
             <AlertCircle className="h-4 w-4 shrink-0" /> {holat.xato}
+          </div>
+        )}
+        {holat.xabar && (
+          <div className="flex items-center gap-2 rounded-xl border border-success/20 bg-success/8 px-3.5 py-2.5 text-sm text-success">
+            <AlertCircle className="h-4 w-4 shrink-0" /> {holat.xabar}
           </div>
         )}
 
@@ -65,10 +75,10 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email manzil (ixtiyoriy)</Label>
+          <Label htmlFor="email">Email manzil</Label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <Input id="email" name="email" type="email" placeholder="siz@example.uz" className="pl-10" autoComplete="email" />
+            <Input id="email" name="email" type="email" placeholder="siz@example.uz" className="pl-10" required autoComplete="email" />
           </div>
         </div>
 

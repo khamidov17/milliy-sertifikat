@@ -1,15 +1,27 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { db } from "./db";
-import { parolXesh, parolTekshir } from "./hash";
-import { sessiyaYaratish, sessiyaTugatish, joriyFoydalanuvchi } from "./auth";
+import { supabaseServer } from "./supabase/server";
+import { supabaseAdmin } from "./supabase/admin";
 
 export interface AuthHolat {
   xato?: string;
+  xabar?: string;
+  ok?: boolean;
+  next?: string; // muvaffaqiyatda klient shu manzilga o'tadi (cookie timing uchun)
 }
 
-// ── Ro'yxatdan o'tish ──
+function aralashtir<T>(a: T[]): T[] {
+  const c = [...a];
+  for (let i = c.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [c[i], c[j]] = [c[j], c[i]];
+  }
+  return c;
+}
+
+// ═══════════════ AUTH (Supabase Auth) ═══════════════
+
 export async function royxatdanOtish(_prev: AuthHolat, form: FormData): Promise<AuthHolat> {
   const ism = String(form.get("ism") ?? "").trim();
   const familiya = String(form.get("familiya") ?? "").trim();
@@ -17,123 +29,118 @@ export async function royxatdanOtish(_prev: AuthHolat, form: FormData): Promise<
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const parol = String(form.get("parol") ?? "");
 
-  if (!ism || !username || !parol) return { xato: "Barcha majburiy maydonlarni to'ldiring." };
+  if (!ism || !username || !email || !parol) return { xato: "Barcha majburiy maydonlarni to'ldiring." };
   if (username.length < 3) return { xato: "Foydalanuvchi nomi kamida 3 ta belgi bo'lsin." };
   if (parol.length < 6) return { xato: "Parol kamida 6 ta belgi bo'lsin." };
 
-  const bor = db().prepare("SELECT id FROM users WHERE username = ? OR email = ?").get(username, email || null);
-  if (bor) return { xato: "Bu foydalanuvchi nomi yoki email band." };
+  const admin = supabaseAdmin();
+  const { data: bor } = await admin.from("profiles").select("id").eq("username", username).maybeSingle();
+  if (bor) return { xato: "Bu foydalanuvchi nomi band." };
 
-  const info = db()
-    .prepare("INSERT INTO users (ism, familiya, username, email, parol, rol, created_at) VALUES (?,?,?,?,?,?,?)")
-    .run(ism, familiya, username, email || null, parolXesh(parol), "student", Date.now());
-
-  await sessiyaYaratish(Number(info.lastInsertRowid));
-  redirect("/dashboard");
+  const sb = await supabaseServer();
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password: parol,
+    options: { data: { ism, familiya, username } },
+  });
+  if (error) {
+    if (error.message.toLowerCase().includes("already")) return { xato: "Bu email allaqachon ro'yxatdan o'tgan." };
+    return { xato: error.message };
+  }
+  if (data.session) return { ok: true, next: "/dashboard" };
+  return { xabar: "Ro'yxatdan o'tdingiz. Emailingizni tasdiqlang, so'ng tizimga kiring." };
 }
 
-// ── Kirish ──
 export async function kirish(_prev: AuthHolat, form: FormData): Promise<AuthHolat> {
   const idf = String(form.get("idf") ?? "").trim().toLowerCase();
   const parol = String(form.get("parol") ?? "");
   if (!idf || !parol) return { xato: "Ma'lumotlarni kiriting." };
 
-  const u = db()
-    .prepare("SELECT id, parol, rol FROM users WHERE username = ? OR email = ?")
-    .get(idf, idf) as { id: number; parol: string; rol: string } | undefined;
+  let email = idf;
+  if (!idf.includes("@")) {
+    // username → email (admin orqali, chunki hali kirmagan)
+    const admin = supabaseAdmin();
+    const { data: p } = await admin.from("profiles").select("id").eq("username", idf).maybeSingle();
+    if (!p) return { xato: "Login yoki parol noto'g'ri." };
+    const { data: u } = await admin.auth.admin.getUserById(p.id);
+    if (!u?.user?.email) return { xato: "Login yoki parol noto'g'ri." };
+    email = u.user.email;
+  }
 
-  if (!u || !parolTekshir(parol, u.parol)) return { xato: "Login yoki parol noto'g'ri." };
+  const sb = await supabaseServer();
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: parol });
+  if (error || !data.user) return { xato: "Login yoki parol noto'g'ri." };
 
-  await sessiyaYaratish(u.id);
-  redirect(u.rol === "admin" || u.rol === "teacher" ? "/admin/dashboard" : "/dashboard");
+  const admin = supabaseAdmin();
+  const { data: p } = await admin.from("profiles").select("rol").eq("id", data.user.id).single();
+  const next = p?.rol === "admin" || p?.rol === "teacher" ? "/admin/dashboard" : "/dashboard";
+  return { ok: true, next };
 }
 
 export async function chiqish() {
-  await sessiyaTugatish();
+  const sb = await supabaseServer();
+  await sb.auth.signOut();
   redirect("/login");
 }
 
-// ═══════════════ MASHQ (practice — klientda baholanadi) ═══════════════
+// ═══════════════ MASHQ (practice) ═══════════════
 
 export interface KlientSavol {
-  id: number;
-  bob: string | null;
-  mavzu: string;
-  manba_kod: string | null;
-  qiyinchilik: string;
-  matn: string;
-  variantlar: string[];
-  togri: string;
-  izoh: string;
-}
-
-type SavolRow = {
   id: number; bob: string | null; mavzu: string; manba_kod: string | null;
-  qiyinchilik: string | null; matn: string; variantlar: string; togri: string; izoh: string;
-};
+  qiyinchilik: string; matn: string; variantlar: string[]; togri: string; izoh: string;
+}
 
 export async function savollarOl(params: {
-  rejim: "mavzu" | "kurs";
-  mavzu?: string;
-  qiyinchilik?: string;
-  soni: number;
+  rejim: "mavzu" | "kurs"; mavzu?: string; qiyinchilik?: string; soni: number;
 }): Promise<KlientSavol[]> {
-  const d = db();
-  let rows: SavolRow[];
+  const admin = supabaseAdmin();
+  const sel = "id,bob,mavzu,manba_kod,qiyinchilik,matn,variantlar,togri,izoh";
+  let rows: KlientSavol[] = [];
+
   if (params.rejim === "kurs") {
-    rows = d.prepare("SELECT * FROM questions ORDER BY RANDOM() LIMIT ?").all(params.soni) as SavolRow[];
-  } else if (params.qiyinchilik && params.qiyinchilik !== "aralash") {
-    rows = d.prepare("SELECT * FROM questions WHERE mavzu = ? AND qiyinchilik = ? ORDER BY RANDOM() LIMIT ?").all(params.mavzu ?? "", params.qiyinchilik, params.soni) as SavolRow[];
-    if (rows.length === 0) rows = d.prepare("SELECT * FROM questions WHERE mavzu = ? ORDER BY RANDOM() LIMIT ?").all(params.mavzu ?? "", params.soni) as SavolRow[];
+    const { data } = await admin.from("questions").select(sel).limit(500);
+    rows = aralashtir((data ?? []) as KlientSavol[]).slice(0, params.soni);
   } else {
-    rows = d.prepare("SELECT * FROM questions WHERE mavzu = ? ORDER BY RANDOM() LIMIT ?").all(params.mavzu ?? "", params.soni) as SavolRow[];
+    let q = admin.from("questions").select(sel).eq("mavzu", params.mavzu ?? "");
+    if (params.qiyinchilik && params.qiyinchilik !== "aralash") q = q.eq("qiyinchilik", params.qiyinchilik);
+    let { data } = await q.limit(500);
+    if ((!data || data.length === 0) && params.qiyinchilik && params.qiyinchilik !== "aralash") {
+      data = (await admin.from("questions").select(sel).eq("mavzu", params.mavzu ?? "").limit(500)).data;
+    }
+    rows = aralashtir((data ?? []) as KlientSavol[]).slice(0, params.soni);
   }
-  return rows.map((r) => ({
-    id: r.id, bob: r.bob, mavzu: r.mavzu, manba_kod: r.manba_kod,
-    qiyinchilik: r.qiyinchilik ?? "orta", matn: r.matn,
-    variantlar: JSON.parse(r.variantlar) as string[], togri: r.togri, izoh: r.izoh ?? "",
-  }));
+  return rows.map((r) => ({ ...r, qiyinchilik: r.qiyinchilik ?? "orta", izoh: r.izoh ?? "" }));
 }
 
-export interface JavobYozuv {
-  question_id: number;
-  tanlangan: string | null;
-  togri: boolean;
-  sekund: number;
-}
+export interface JavobYozuv { question_id: number; tanlangan: string | null; togri: boolean; sekund: number; }
 
-// Urinishni + har bir savol javobini saqlaydi (tarix/review uchun).
 export async function urinishSaqlash(data: {
-  turi: string;
-  mock_id?: number | null;
-  nomi?: string;
-  jami: number;
-  togri: number;
-  davomiylik: number;
-  javoblar: JavobYozuv[];
+  turi: string; mock_id?: number | null; nomi?: string;
+  jami: number; togri: number; davomiylik: number; javoblar: JavobYozuv[];
 }) {
-  const u = await joriyFoydalanuvchi();
-  if (!u) return;
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return;
+  const admin = supabaseAdmin();
   const ball = Math.round((data.togri / Math.max(1, data.jami)) * 100);
-  const info = db()
-    .prepare("INSERT INTO attempts (user_id, turi, mock_id, nomi, jami, togri, ball, davomiylik, created_at) VALUES (?,?,?,?,?,?,?,?,?)")
-    .run(u.id, data.turi, data.mock_id ?? null, data.nomi ?? null, data.jami, data.togri, ball, data.davomiylik, Date.now());
-  const aid = Number(info.lastInsertRowid);
-  const ins = db().prepare("INSERT INTO attempt_answers (attempt_id, question_id, tanlangan, togri, sekund) VALUES (?,?,?,?,?)");
-  for (const j of data.javoblar) ins.run(aid, j.question_id, j.tanlangan, j.togri ? 1 : 0, j.sekund);
+  const { data: att, error } = await admin.from("attempts").insert({
+    user_id: user.id, turi: data.turi, mock_id: data.mock_id ?? null, nomi: data.nomi ?? null,
+    jami: data.jami, togri: data.togri, ball, davomiylik: data.davomiylik,
+  }).select("id").single();
+  if (error || !att) return;
+  const rows = data.javoblar.map((j) => ({
+    attempt_id: att.id, question_id: j.question_id, tanlangan: j.tanlangan, togri: j.togri, sekund: j.sekund,
+  }));
+  if (rows.length) await admin.from("attempt_answers").insert(rows);
 }
 
 // ═══════════════ SINOV IMTIHONLARI (mock — SERVERDA baholanadi) ═══════════════
 
 export interface MockRoyxatItem {
-  id: number; nomi: string; tavsif: string; turi: string;
-  davomiylikDaqiqa: number; savollarSoni: number;
-  holat: "ochiq" | "kelgusi" | "yopilgan";
-  boshlanish: number | null; tugash: number | null;
+  id: number; nomi: string; tavsif: string; turi: string; davomiylikDaqiqa: number; savollarSoni: number;
+  holat: "ochiq" | "kelgusi" | "yopilgan"; boshlanish: number | null; tugash: number | null;
 }
-export interface MockSavol {
-  id: number; mavzu: string; qiyinchilik: string; matn: string; variantlar: string[]; manba_kod: string | null;
-}
+export interface MockSavol { id: number; mavzu: string; qiyinchilik: string; matn: string; variantlar: string[]; manba_kod: string | null; }
 export interface MockBoshlash { nomi: string; davomiylikDaqiqa: number; savollar: MockSavol[]; }
 export interface NatijaSavol {
   question_id: number; matn: string; variantlar: string[]; mavzu: string; manba_kod: string | null;
@@ -141,61 +148,63 @@ export interface NatijaSavol {
 }
 export interface MockNatija { attemptId: number; ball: number; togri: number; jami: number; davomiylik: number; natijalar: NatijaSavol[]; }
 
-type MockRow = {
-  id: number; nomi: string; tavsif: string; turi: string; davomiylik_daqiqa: number;
-  boshlanish_at: number | null; tugash_at: number | null; savollarSoni: number;
-};
-
 export async function mockRoyxat(): Promise<MockRoyxatItem[]> {
+  const admin = supabaseAdmin();
   const now = Date.now();
-  const rows = db()
-    .prepare("SELECT m.*, (SELECT COUNT(*) FROM mock_questions q WHERE q.mock_id = m.id) savollarSoni FROM mock_exams m WHERE m.active = 1 ORDER BY m.id")
-    .all() as MockRow[];
-  return rows.map((r) => {
+  const { data } = await admin
+    .from("mock_exams")
+    .select("id,nomi,tavsif,turi,davomiylik_daqiqa,boshlanish_at,tugash_at, mock_questions(count)")
+    .eq("active", true)
+    .order("id");
+  return (data ?? []).map((r) => {
+    const b = r.boshlanish_at ? new Date(r.boshlanish_at).getTime() : null;
+    const t = r.tugash_at ? new Date(r.tugash_at).getTime() : null;
     let holat: "ochiq" | "kelgusi" | "yopilgan" = "ochiq";
-    if (r.boshlanish_at && now < r.boshlanish_at) holat = "kelgusi";
-    else if (r.tugash_at && now > r.tugash_at) holat = "yopilgan";
+    if (b && now < b) holat = "kelgusi";
+    else if (t && now > t) holat = "yopilgan";
+    const cnt = Array.isArray(r.mock_questions) && r.mock_questions[0] ? (r.mock_questions[0] as { count: number }).count : 0;
     return {
-      id: r.id, nomi: r.nomi, tavsif: r.tavsif, turi: r.turi,
-      davomiylikDaqiqa: r.davomiylik_daqiqa, savollarSoni: r.savollarSoni,
-      holat, boshlanish: r.boshlanish_at, tugash: r.tugash_at,
+      id: r.id, nomi: r.nomi, tavsif: r.tavsif ?? "", turi: r.turi,
+      davomiylikDaqiqa: r.davomiylik_daqiqa, savollarSoni: cnt, holat, boshlanish: b, tugash: t,
     };
   });
 }
 
 export async function mockSavollari(mockId: number): Promise<MockBoshlash | { xato: string }> {
-  const u = await joriyFoydalanuvchi();
-  if (!u) return { xato: "Avval tizimga kiring." };
-  const m = db().prepare("SELECT * FROM mock_exams WHERE id = ? AND active = 1").get(mockId) as MockRow | undefined;
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return { xato: "Avval tizimga kiring." };
+  const admin = supabaseAdmin();
+  const { data: m } = await admin.from("mock_exams").select("*").eq("id", mockId).eq("active", true).single();
   if (!m) return { xato: "Imtihon topilmadi." };
   const now = Date.now();
-  if (m.boshlanish_at && now < m.boshlanish_at) return { xato: "Imtihon hali boshlanmagan." };
-  if (m.tugash_at && now > m.tugash_at) return { xato: "Imtihon muddati tugagan." };
-  const rows = db()
-    .prepare("SELECT q.id, q.mavzu, q.qiyinchilik, q.matn, q.variantlar, q.manba_kod FROM mock_questions mq JOIN questions q ON q.id = mq.question_id WHERE mq.mock_id = ? ORDER BY mq.tartib")
-    .all(mockId) as { id: number; mavzu: string; qiyinchilik: string | null; matn: string; variantlar: string; manba_kod: string | null }[];
-  return {
-    nomi: m.nomi, davomiylikDaqiqa: m.davomiylik_daqiqa,
-    savollar: rows.map((r) => ({ id: r.id, mavzu: r.mavzu, qiyinchilik: r.qiyinchilik ?? "orta", matn: r.matn, variantlar: JSON.parse(r.variantlar) as string[], manba_kod: r.manba_kod })),
-  };
+  if (m.boshlanish_at && now < new Date(m.boshlanish_at).getTime()) return { xato: "Imtihon hali boshlanmagan." };
+  if (m.tugash_at && now > new Date(m.tugash_at).getTime()) return { xato: "Imtihon muddati tugagan." };
+  const { data } = await admin
+    .from("mock_questions")
+    .select("tartib, questions(id,mavzu,qiyinchilik,matn,variantlar,manba_kod)")
+    .eq("mock_id", mockId)
+    .order("tartib");
+  const savollar: MockSavol[] = (data ?? []).map((r) => {
+    const q = r.questions as unknown as { id: number; mavzu: string; qiyinchilik: string | null; matn: string; variantlar: string[]; manba_kod: string | null };
+    return { id: q.id, mavzu: q.mavzu, qiyinchilik: q.qiyinchilik ?? "orta", matn: q.matn, variantlar: q.variantlar, manba_kod: q.manba_kod };
+  });
+  return { nomi: m.nomi, davomiylikDaqiqa: m.davomiylik_daqiqa, savollar };
 }
 
 export async function mockYuborish(data: {
-  mockId: number;
-  javoblar: { question_id: number; tanlangan: string | null; sekund: number }[];
-  davomiylik: number;
+  mockId: number; javoblar: { question_id: number; tanlangan: string | null; sekund: number }[]; davomiylik: number;
 }): Promise<MockNatija | { xato: string }> {
-  const u = await joriyFoydalanuvchi();
-  if (!u) return { xato: "Avval tizimga kiring." };
-  const m = db().prepare("SELECT nomi FROM mock_exams WHERE id = ?").get(data.mockId) as { nomi: string } | undefined;
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return { xato: "Avval tizimga kiring." };
+  const admin = supabaseAdmin();
+  const { data: m } = await admin.from("mock_exams").select("nomi").eq("id", data.mockId).single();
 
   const qids = data.javoblar.map((j) => j.question_id);
-  const qmap = new Map<number, { matn: string; variantlar: string; togri: string; izoh: string; mavzu: string; manba_kod: string | null }>();
-  if (qids.length) {
-    const place = qids.map(() => "?").join(",");
-    const rows = db().prepare(`SELECT id, matn, variantlar, togri, izoh, mavzu, manba_kod FROM questions WHERE id IN (${place})`).all(...qids) as { id: number; matn: string; variantlar: string; togri: string; izoh: string; mavzu: string; manba_kod: string | null }[];
-    for (const r of rows) qmap.set(r.id, r);
-  }
+  const { data: qs } = await admin.from("questions").select("id,matn,variantlar,togri,izoh,mavzu,manba_kod").in("id", qids);
+  const qmap = new Map<number, { matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null }>();
+  for (const q of qs ?? []) qmap.set(q.id, q as { id: number } & { matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null });
 
   let togri = 0;
   const natijalar: NatijaSavol[] = data.javoblar.map((j) => {
@@ -203,7 +212,7 @@ export async function mockYuborish(data: {
     const ok = !!q && j.tanlangan === q.togri;
     if (ok) togri++;
     return {
-      question_id: j.question_id, matn: q?.matn ?? "", variantlar: q ? (JSON.parse(q.variantlar) as string[]) : [],
+      question_id: j.question_id, matn: q?.matn ?? "", variantlar: q?.variantlar ?? [],
       mavzu: q?.mavzu ?? "", manba_kod: q?.manba_kod ?? null, tanlangan: j.tanlangan,
       togriJavob: q?.togri ?? "", togri: ok, izoh: q?.izoh ?? "", sekund: j.sekund,
     };
@@ -211,46 +220,61 @@ export async function mockYuborish(data: {
 
   const jami = data.javoblar.length;
   const ball = Math.round((togri / Math.max(1, jami)) * 100);
-  const info = db()
-    .prepare("INSERT INTO attempts (user_id, turi, mock_id, nomi, jami, togri, ball, davomiylik, created_at) VALUES (?,?,?,?,?,?,?,?,?)")
-    .run(u.id, "mock", data.mockId, m?.nomi ?? "Sinov", jami, togri, ball, data.davomiylik, Date.now());
-  const aid = Number(info.lastInsertRowid);
-  const ins = db().prepare("INSERT INTO attempt_answers (attempt_id, question_id, tanlangan, togri, sekund) VALUES (?,?,?,?,?)");
-  for (const n of natijalar) ins.run(aid, n.question_id, n.tanlangan, n.togri ? 1 : 0, n.sekund);
-
-  return { attemptId: aid, ball, togri, jami, davomiylik: data.davomiylik, natijalar };
+  const { data: att } = await admin.from("attempts").insert({
+    user_id: user.id, turi: "mock", mock_id: data.mockId, nomi: m?.nomi ?? "Sinov",
+    jami, togri, ball, davomiylik: data.davomiylik,
+  }).select("id").single();
+  if (att) {
+    const rows = natijalar.map((n) => ({ attempt_id: att.id, question_id: n.question_id, tanlangan: n.tanlangan, togri: n.togri, sekund: n.sekund }));
+    if (rows.length) await admin.from("attempt_answers").insert(rows);
+  }
+  return { attemptId: att?.id ?? 0, ball, togri, jami, davomiylik: data.davomiylik, natijalar };
 }
 
 // ═══════════════ TARIX (history) ═══════════════
 
-export interface TarixItem {
-  id: number; turi: string; nomi: string; ball: number; togri: number; jami: number; davomiylik: number; sana: number;
-}
+export interface TarixItem { id: number; turi: string; nomi: string; ball: number; togri: number; jami: number; davomiylik: number; sana: number; }
 export interface TarixDetal extends TarixItem { natijalar: NatijaSavol[]; }
 
 export async function tarix(): Promise<TarixItem[]> {
-  const u = await joriyFoydalanuvchi();
-  if (!u) return [];
-  const rows = db()
-    .prepare("SELECT id, turi, nomi, ball, togri, jami, davomiylik, created_at FROM attempts WHERE user_id = ? ORDER BY id DESC LIMIT 100")
-    .all(u.id) as { id: number; turi: string; nomi: string | null; ball: number; togri: number; jami: number; davomiylik: number; created_at: number }[];
-  return rows.map((r) => ({ id: r.id, turi: r.turi, nomi: r.nomi ?? "Mashq", ball: r.ball, togri: r.togri, jami: r.jami, davomiylik: r.davomiylik, sana: r.created_at }));
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return [];
+  const admin = supabaseAdmin();
+  const { data } = await admin
+    .from("attempts")
+    .select("id,turi,nomi,ball,togri,jami,davomiylik,created_at")
+    .eq("user_id", user.id)
+    .order("id", { ascending: false })
+    .limit(100);
+  return (data ?? []).map((r) => ({
+    id: r.id, turi: r.turi, nomi: r.nomi ?? "Mashq", ball: r.ball, togri: r.togri,
+    jami: r.jami, davomiylik: r.davomiylik, sana: new Date(r.created_at).getTime(),
+  }));
 }
 
 export async function tarixDetal(attemptId: number): Promise<TarixDetal | null> {
-  const u = await joriyFoydalanuvchi();
-  if (!u) return null;
-  const a = db().prepare("SELECT * FROM attempts WHERE id = ? AND user_id = ?").get(attemptId, u.id) as
-    | { id: number; turi: string; nomi: string | null; ball: number; togri: number; jami: number; davomiylik: number; created_at: number }
-    | undefined;
+  const sb = await supabaseServer();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return null;
+  const admin = supabaseAdmin();
+  const { data: a } = await admin.from("attempts").select("*").eq("id", attemptId).eq("user_id", user.id).single();
   if (!a) return null;
-  const rows = db()
-    .prepare("SELECT aa.question_id, aa.tanlangan, aa.togri, aa.sekund, q.matn, q.variantlar, q.togri togriJavob, q.izoh, q.mavzu, q.manba_kod FROM attempt_answers aa JOIN questions q ON q.id = aa.question_id WHERE aa.attempt_id = ? ORDER BY aa.id")
-    .all(attemptId) as { question_id: number; tanlangan: string | null; togri: number; sekund: number; matn: string; variantlar: string; togriJavob: string; izoh: string; mavzu: string; manba_kod: string | null }[];
-  const natijalar: NatijaSavol[] = rows.map((r) => ({
-    question_id: r.question_id, matn: r.matn, variantlar: JSON.parse(r.variantlar) as string[],
-    mavzu: r.mavzu, manba_kod: r.manba_kod, tanlangan: r.tanlangan, togriJavob: r.togriJavob,
-    togri: !!r.togri, izoh: r.izoh ?? "", sekund: r.sekund,
-  }));
-  return { id: a.id, turi: a.turi, nomi: a.nomi ?? "Mashq", ball: a.ball, togri: a.togri, jami: a.jami, davomiylik: a.davomiylik, sana: a.created_at, natijalar };
+  const { data: rows } = await admin
+    .from("attempt_answers")
+    .select("question_id,tanlangan,togri,sekund, questions(matn,variantlar,togri,izoh,mavzu,manba_kod)")
+    .eq("attempt_id", attemptId)
+    .order("id");
+  const natijalar: NatijaSavol[] = (rows ?? []).map((r) => {
+    const q = r.questions as unknown as { matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null };
+    return {
+      question_id: r.question_id, matn: q?.matn ?? "", variantlar: q?.variantlar ?? [],
+      mavzu: q?.mavzu ?? "", manba_kod: q?.manba_kod ?? null, tanlangan: r.tanlangan,
+      togriJavob: q?.togri ?? "", togri: r.togri, izoh: q?.izoh ?? "", sekund: r.sekund,
+    };
+  });
+  return {
+    id: a.id, turi: a.turi, nomi: a.nomi ?? "Mashq", ball: a.ball, togri: a.togri,
+    jami: a.jami, davomiylik: a.davomiylik, sana: new Date(a.created_at).getTime(), natijalar,
+  };
 }
