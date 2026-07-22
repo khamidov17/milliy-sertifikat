@@ -156,6 +156,8 @@ export async function javobTekshir(questionId: number, tanlangan: string): Promi
   const sb = await supabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return null;
+  // Answer-oracle'ni cheklash: inson tezligidan yuqori chaqiruvlar bloklanadi.
+  if (!tekshirLimit("check:" + user.id, 120, 60_000)) return null;
   const admin = supabaseAdmin();
   const { data: q } = await admin.from("questions").select("togri,izoh").eq("id", questionId).single();
   if (!q) return null;
@@ -173,7 +175,11 @@ export async function urinishSaqlash(data: {
   if (!tekshirLimit("save:" + user.id, 40, 60_000)) return;
 
   const turi = data.turi === "kurs" ? "kurs" : "mavzu"; // whitelist
-  const javoblar = (Array.isArray(data.javoblar) ? data.javoblar : []).slice(0, 200);
+  // question_id bo'yicha DEDUP (takroriy javob qatorlari va ball buzilishini oldini oladi).
+  const korilgan = new Set<number>();
+  const javoblar = (Array.isArray(data.javoblar) ? data.javoblar : [])
+    .filter((j) => (korilgan.has(j.question_id) ? false : (korilgan.add(j.question_id), true)))
+    .slice(0, 200);
   const qids = javoblar.map((j) => j.question_id);
   if (!qids.length) return;
 
@@ -278,31 +284,40 @@ export async function mockYuborish(data: {
   if (m.boshlanish_at && now < new Date(m.boshlanish_at).getTime()) return { xato: "Imtihon hali boshlanmagan." };
   if (m.tugash_at && now > new Date(m.tugash_at).getTime()) return { xato: "Imtihon muddati tugagan." };
 
-  // FAQAT shu imtihonga tegishli savollar (IDOR / answer-oracle himoyasi)
-  const { data: mq } = await admin.from("mock_questions").select("question_id").eq("mock_id", data.mockId);
-  const ruxsat = new Set((mq ?? []).map((r) => r.question_id));
-  const javoblar = (Array.isArray(data.javoblar) ? data.javoblar : []).filter((j) => ruxsat.has(j.question_id));
-  const qids = javoblar.map((j) => j.question_id);
+  // Imtihonning HAQIQIY savollar to'plami (server manbasi) — tartib bo'yicha, javoblari bilan.
+  const { data: mqrows } = await admin
+    .from("mock_questions")
+    .select("tartib, questions(id,matn,variantlar,togri,izoh,mavzu,manba_kod)")
+    .eq("mock_id", data.mockId)
+    .order("tartib");
+  const mockQs = (mqrows ?? [])
+    .map((r) => r.questions as unknown as { id: number; matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null })
+    .filter(Boolean);
+  if (!mockQs.length) return { xato: "Imtihonda savollar yo'q." };
 
-  const { data: qs } = qids.length
-    ? await admin.from("questions").select("id,matn,variantlar,togri,izoh,mavzu,manba_kod").in("id", qids)
-    : { data: [] };
-  const qmap = new Map<number, { matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null }>();
-  for (const q of qs ?? []) qmap.set((q as { id: number }).id, q as { id: number } & { matn: string; variantlar: string[]; togri: string; izoh: string; mavzu: string; manba_kod: string | null });
+  // Klient javoblari — question_id bo'yicha DEDUP (birinchisi qoladi).
+  const klientJavob = new Map<number, { tanlangan: string | null; sekund: number }>();
+  for (const j of Array.isArray(data.javoblar) ? data.javoblar : []) {
+    if (!klientJavob.has(j.question_id)) {
+      klientJavob.set(j.question_id, { tanlangan: j.tanlangan, sekund: Math.max(0, Math.min(36000, Number(j.sekund) || 0)) });
+    }
+  }
 
+  // Baholash IMTIHONNING BARCHA savollari bo'yicha — javob berilmagani = xato.
   let togri = 0;
-  const natijalar: NatijaSavol[] = javoblar.map((j) => {
-    const q = qmap.get(j.question_id);
-    const ok = !!q && j.tanlangan === q.togri;
+  const natijalar: NatijaSavol[] = mockQs.map((q) => {
+    const a = klientJavob.get(q.id);
+    const tanlangan = a?.tanlangan ?? null;
+    const ok = tanlangan === q.togri;
     if (ok) togri++;
     return {
-      question_id: j.question_id, matn: q?.matn ?? "", variantlar: q?.variantlar ?? [],
-      mavzu: q?.mavzu ?? "", manba_kod: q?.manba_kod ?? null, tanlangan: j.tanlangan,
-      togriJavob: q?.togri ?? "", togri: ok, izoh: q?.izoh ?? "", sekund: Math.max(0, Math.min(36000, Number(j.sekund) || 0)),
+      question_id: q.id, matn: q.matn, variantlar: q.variantlar,
+      mavzu: q.mavzu, manba_kod: q.manba_kod, tanlangan,
+      togriJavob: q.togri, togri: ok, izoh: q.izoh ?? "", sekund: a?.sekund ?? 0,
     };
   });
 
-  const jami = natijalar.length;
+  const jami = mockQs.length; // HAQIQIY denominator (klient soni emas)
   const ball = Math.round((togri / Math.max(1, jami)) * 100);
   const { data: att } = await admin.from("attempts").insert({
     user_id: user.id, turi: "mock", mock_id: data.mockId, nomi: m.nomi,

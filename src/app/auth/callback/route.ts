@@ -6,8 +6,9 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") || "/dashboard";
-  // ochiq-redirect himoyasi: faqat ichki (site-relative) manzil
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  // Ochiq-redirect himoyasi: faqat "/xxx" ko'rinishidagi ichki manzil.
+  // "//evil" va "/\evil" (brauzerlar \ ni / ga aylantiradi) rad etiladi.
+  const safeNext = /^\/[^/\\]/.test(next) ? next : "/dashboard";
 
   if (code) {
     const sb = await supabaseServer();

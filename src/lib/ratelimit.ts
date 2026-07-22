@@ -11,8 +11,17 @@ const store: Map<string, Buchok> = (g.__rl ??= new Map<string, Buchok>());
 
 export async function mijozKaliti(): Promise<string> {
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
-  return ip;
+  // x-real-ip — ishonchli proksi tomonidan qo'yiladi. X-Forwarded-For'ning BIRINCHI
+  // elementi klient tomonidan soxtalashtirilishi mumkin; eng OXIRGI element — eng yaqin
+  // (ishonchli) proksi qo'shgan haqiqiy IP. Ko'p-proksili muhitda buni sozlang.
+  const real = h.get("x-real-ip");
+  if (real) return real.trim();
+  const xff = h.get("x-forwarded-for");
+  if (xff) {
+    const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
+  return "local";
 }
 
 // true = ruxsat, false = limit oshdi
