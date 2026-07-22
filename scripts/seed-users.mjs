@@ -33,6 +33,7 @@ for (const d of demolar) {
     password: d.parol,
     email_confirm: true,
     user_metadata: { ism: d.ism, familiya: d.familiya, username: d.username },
+    app_metadata: { rol: d.rol }, // JWT'da rol — guard DB so'rovisiz o'qiydi
   });
   if (error) {
     console.log(`${d.username}: ${error.message}`);
