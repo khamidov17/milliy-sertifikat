@@ -22,6 +22,13 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  // Lokal (tarmoqsiz) tekshiruv — ES256 imzo JWKS bilan tasdiqlanadi.
+  const { data } = await supabase.auth.getClaims();
+  const exp = (data?.claims as { exp?: number } | undefined)?.exp;
+  const now = Math.floor(Date.now() / 1000);
+  // Faqat token muddati yaqinlashsa (yoki yo'q bo'lsa) tarmoq orqali yangilaymiz.
+  if (!exp || exp - now < 300) {
+    await supabase.auth.getUser();
+  }
   return response;
 }

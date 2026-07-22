@@ -17,22 +17,22 @@ export interface AppUser {
 // (har biri Supabase'ga alohida tarmoq so'rovi edi — sekinlik sababi).
 export const joriyFoydalanuvchi = cache(async (): Promise<AppUser | null> => {
   const sb = await supabaseServer();
-  // HAMMASI JWT ichida (LOKAL o'qiladi — DB round-trip YO'Q):
-  //  - ism/familiya/username → user_metadata (signUp'da yoziladi)
-  //  - rol → app_metadata (default "student"; admin/teacher uchun aniq o'rnatiladi)
-  // Middleware sessiyani getUser bilan tekshiradi, shuning uchun getSession ishonchli.
-  const { data: { session } } = await sb.auth.getSession();
-  const user = session?.user;
-  if (!user) return null;
-  const m = (user.user_metadata ?? {}) as { ism?: string; familiya?: string; username?: string };
-  const rol = ((user.app_metadata as { rol?: string })?.rol as AppUser["rol"]) ?? "student";
+  // getClaims() — JWT imzosini LOKAL tekshiradi (ES256 JWKS, keshlanadi).
+  // Tarmoq so'rovi YO'Q, lekin XAVFSIZ (imzo tekshiriladi). Hammasi JWT ichida:
+  //  ism/familiya/username → user_metadata; rol → app_metadata.
+  const { data } = await sb.auth.getClaims();
+  const c = data?.claims as
+    | { sub?: string; email?: string; user_metadata?: { ism?: string; familiya?: string; username?: string }; app_metadata?: { rol?: string } }
+    | undefined;
+  if (!c?.sub) return null;
+  const m = c.user_metadata ?? {};
   return {
-    id: user.id,
-    email: user.email ?? null,
+    id: c.sub,
+    email: c.email ?? null,
     ism: m.ism ?? "",
     familiya: m.familiya ?? "",
     username: m.username ?? null,
-    rol,
+    rol: (c.app_metadata?.rol as AppUser["rol"]) ?? "student",
   };
 });
 
